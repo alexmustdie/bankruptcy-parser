@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: parser_user
+      POSTGRES_PASSWORD: parser_pass
+      POSTGRES_DB: bankruptcy_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parser_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  parser:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://parser_user:parser_pass@db:5432/bankruptcy_db
+      INPUT_FILE: /app/data/inn_list.xlsx
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: python -m src.main --file /app/data/inn_list.xlsx
+
+volumes:
+  postgres_data:
